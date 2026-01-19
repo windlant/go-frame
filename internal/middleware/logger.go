@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -16,5 +17,5 @@ func Logger(r *ghttp.Request) {
 	duration := time.Since(start)
 	status := r.Response.Status
 
-	println("[GOFRAE LOG]", method, path, "->", status, "(", duration, ")")
+	fmt.Printf("[GOFRAME LOG] %s %s -> %d (%v)\n", method, path, status, duration)
 }

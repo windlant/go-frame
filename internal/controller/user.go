@@ -17,7 +17,7 @@ func (u *UserController) GetUsers(r *ghttp.Request) {
 	r.Response.WriteJson(users)
 }
 
-// GetUser 获取单个用户
+// GetUser 根据 ID 获取单个用户
 func (u *UserController) GetUser(r *ghttp.Request) {
 	id := r.Get("id").Int()
 	if id <= 0 {
@@ -32,62 +32,108 @@ func (u *UserController) GetUser(r *ghttp.Request) {
 	r.Response.WriteStatusExit(404, "User not found")
 }
 
-// CreateUser 创建用户
-func (u *UserController) CreateUser(r *ghttp.Request) {
-	var input model.User
-	if err := r.Parse(&input); err != nil {
-		r.Response.WriteStatusExit(400, err.Error())
-	}
-	input.ID = nextID
-	nextID++
-	users = append(users, input)
-	r.Response.WriteJsonExit(input)
-}
-
-// UpdateUser 更新用户
-func (u *UserController) UpdateUser(r *ghttp.Request) {
-	id := r.Get("id").Int()
-	if id <= 0 {
-		r.Response.WriteStatusExit(400, "Invalid user ID")
-	}
-	var input model.User
-	if err := r.Parse(&input); err != nil {
+// CreateUsers 批量创建用户
+func (u *UserController) CreateUsers(r *ghttp.Request) {
+	var inputs []model.User
+	if err := r.Parse(&inputs); err != nil {
 		r.Response.WriteStatusExit(400, err.Error())
 	}
 
-	found := false
-	for i, user := range users {
-		if user.ID == id {
-			input.ID = id
-			users[i] = input
-			r.Response.WriteJsonExit(input)
-			found = true
-			break
+	var created []model.User
+	var errors []string
+
+	for _, input := range inputs {
+		if input.Name == "" || input.Email == "" {
+			errors = append(errors, "Name and Email are required")
+			continue
 		}
+		input.ID = nextID
+		nextID++
+		users = append(users, input)
+		created = append(created, input)
 	}
-	if !found {
-		r.Response.WriteStatusExit(404, "User not found")
-	}
+
+	r.Response.WriteJsonExit(map[string]interface{}{
+		"created": created,
+		"errors":  errors,
+	})
 }
 
-// DeleteUser 删除用户
-func (u *UserController) DeleteUser(r *ghttp.Request) {
-	id := r.Get("id").Int()
-	if id <= 0 {
-		r.Response.WriteStatusExit(400, "Invalid user ID")
+// UpdateUsers 批量更新用户
+func (u *UserController) UpdateUsers(r *ghttp.Request) {
+	var inputs []model.User
+	if err := r.Parse(&inputs); err != nil {
+		r.Response.WriteStatusExit(400, err.Error())
 	}
 
-	found := false
-	for i, user := range users {
-		if user.ID == id {
-			users = append(users[:i], users[i+1:]...)
-			found = true
-			break
+	var updated []model.User
+	var notFound []int
+
+	for _, input := range inputs {
+		if input.ID <= 0 {
+			notFound = append(notFound, input.ID)
+			continue
+		}
+
+		found := false
+		for i, user := range users {
+			if user.ID == input.ID {
+				users[i].Name = input.Name
+				users[i].Email = input.Email
+				updated = append(updated, users[i])
+				found = true
+				break
+			}
+		}
+		if !found {
+			notFound = append(notFound, input.ID)
 		}
 	}
 
-	if !found {
-		r.Response.WriteStatusExit(404, "User not found")
+	r.Response.WriteJsonExit(map[string]interface{}{
+		"updated":   updated,
+		"not_found": notFound,
+	})
+}
+
+// DeleteUsers 批量删除用户
+func (u *UserController) DeleteUsers(r *ghttp.Request) {
+	var req struct {
+		IDs []int `json:"ids"`
 	}
-	r.Response.WriteStatusExit(204)
+	if err := r.Parse(&req); err != nil {
+		r.Response.WriteStatusExit(400, err.Error())
+	}
+
+	var deleted []int
+	delSet := make(map[int]bool)
+	for _, id := range req.IDs {
+		delSet[id] = true
+	}
+
+	toKeep := make([]model.User, 0, len(users))
+	for _, u := range users {
+		if delSet[u.ID] {
+			deleted = append(deleted, u.ID)
+		} else {
+			toKeep = append(toKeep, u)
+		}
+	}
+	users = toKeep
+
+	foundSet := make(map[int]bool)
+	for _, id := range deleted {
+		foundSet[id] = true
+	}
+	var notFound []int
+	for _, id := range req.IDs {
+		if !foundSet[id] {
+			notFound = append(notFound, id)
+		}
+	}
+
+	r.Response.WriteJsonExit(map[string]interface{}{
+		"deleted":   deleted,
+		"not_found": notFound,
+	})
 }

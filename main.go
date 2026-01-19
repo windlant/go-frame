@@ -11,8 +11,14 @@ func main() {
 	s.SetPort(8080)
 	s.Use(middleware.Logger)
 
+	userCtrl := new(controller.UserController)
+
 	s.Group("/", func(group *ghttp.RouterGroup) {
-		group.Bind(new(controller.UserController))
+		group.GET("/users", userCtrl.GetUsers)
+		group.GET("/users/:id", userCtrl.GetUser)
+		group.POST("/users", userCtrl.CreateUsers)
+		group.PUT("/users", userCtrl.UpdateUsers)
+		group.DELETE("/users", userCtrl.DeleteUsers)
 	})
 
 	s.Run()

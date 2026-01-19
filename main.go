@@ -25,6 +25,9 @@ func init() {
 func main() {
 	s := ghttp.GetServer()
 	s.SetPort(8080)
+
+	// 先使用标准输出，注释掉则写入本地文件
+	middleware.SetLoggerOutput(os.Stdout)
 	s.Use(middleware.Logger)
 
 	userCtrl := new(controller.UserController)

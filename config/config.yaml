@@ -1,0 +1,29 @@
+server:
+  address: 8080
+
+logger:
+  # path: "logs"          # 取消注释即可启用文件日志
+  level: all
+  stdout: true            # 始终输出到 stdout（设为 false 则只写文件）
+  rotateSize: 50          # 单个日志文件最大 50MB
+  rotateBackupLimit: 10   # 保留最多 10 个备份
+
+database:
+  default:
+    host: 127.0.0.1
+    port: 3306
+    user: goframe_user
+    pass: G1y2#X.c9Om! 
+    name: goframe_demo
+    type: mysql
+    role: master
+    debug: true
+
+redis:
+  default:
+    enable: true
+    address: 127.0.0.1:6379
+    db: 0
+    # password: ""       
+    pool:
+      size: 100

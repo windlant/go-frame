@@ -1,44 +1,36 @@
 package main
 
 import (
-	"log"
-	"os"
-
-	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/windlant/go-frame/internal/controller"
+	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
+	_ "github.com/gogf/gf/contrib/nosql/redis/v2"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/windlant/go-frame/internal/middleware"
+	"github.com/windlant/go-frame/internal/router"
 )
 
-func init() {
-	if err := os.MkdirAll("logs", 0755); err != nil {
-		log.Fatal("Failed to create logs directory:", err)
-	}
-
-	logFile, err := os.OpenFile("logs/goframe-access.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		log.Fatal("Failed to open log file:", err)
-	}
-
-	middleware.SetLoggerOutput(logFile)
-}
-
 func main() {
-	s := ghttp.GetServer()
+	ctx := gctx.New()
+
+	// 初始化数据库
+	if _, err := g.DB().GetAll(ctx, "SELECT 1"); err != nil {
+		g.Log().Fatal(ctx, "MySQL connect failed:", err)
+	}
+
+	// 初始化 Redis
+	if _, err := g.Redis().Do(ctx, "PING"); err != nil {
+		g.Log().Fatal(ctx, "Redis connect failed:", err)
+	}
+
+	s := g.Server()
 	s.SetPort(8080)
 
-	// 先使用标准输出，注释掉则写入本地文件
-	middleware.SetLoggerOutput(os.Stdout)
+	// 注册中间件
 	s.Use(middleware.Logger)
 
-	userCtrl := new(controller.UserController)
+	// 注册路由
+	router.Register(s)
 
-	s.Group("/", func(group *ghttp.RouterGroup) {
-		group.GET("/users", userCtrl.GetUsers)
-		group.GET("/users/:id", userCtrl.GetUser)
-		group.POST("/users", userCtrl.CreateUsers)
-		group.PUT("/users", userCtrl.UpdateUsers)
-		group.DELETE("/users", userCtrl.DeleteUsers)
-	})
-
+	// 启动服务
 	s.Run()
 }

@@ -1,41 +1,18 @@
 package middleware
 
 import (
-	"fmt"
-	"io"
-	"log"
-	"os"
-	"time"
-
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/os/glog"
 )
 
-var (
-	logWriter io.Writer = os.Stdout
-)
-
-// SetLoggerOutput 设置日志输出目标（例如文件）
-func SetLoggerOutput(w io.Writer) {
-	if w == nil {
-		w = os.Stdout
-	}
-	logWriter = w
-}
-
-// Logger 是 GoFrame 中间件，记录请求日志
 func Logger(r *ghttp.Request) {
-	start := time.Now()
-	method := r.Method
-	path := r.URL.Path
-
+	glog.Infof(
+		r.Context(),
+		"%s %s %d %s",
+		r.Method,
+		r.URL.Path,
+		r.Response.Status,
+		r.GetClientIp(),
+	)
 	r.Middleware.Next()
-
-	duration := time.Since(start)
-	status := r.Response.Status
-
-	// 格式化日志内容
-	msg := fmt.Sprintf("[GOFRAME LOG] %s %s -> %d (%v)\n", method, path, status, duration)
-	if _, err := logWriter.Write([]byte(msg)); err != nil {
-		log.Printf("Failed to write access log: %v", err)
-	}
 }

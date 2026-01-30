@@ -22,3 +22,6 @@
 
 # Logs
 *.log
+
+#comfig
+config/config.yaml

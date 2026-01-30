@@ -13,7 +13,7 @@ database:
     host: 127.0.0.1
     port: 3306
     user: goframe_user
-    pass: G1y2#X.c9Om! 
+    pass: 
     name: goframe_demo
     type: mysql
     role: master

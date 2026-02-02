@@ -23,5 +23,8 @@
 # Logs
 *.log
 
-#comfig
+# comfig
 config/config.yaml
+
+# exe
+go-frame-server

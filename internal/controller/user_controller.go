@@ -1,21 +1,32 @@
 package controller
 
 import (
+	"fmt"
+
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/windlant/go-frame/internal/consts"
 	"github.com/windlant/go-frame/internal/model"
 	"github.com/windlant/go-frame/internal/service"
 )
 
 type UserController struct {
-	userService service.IUserService
+	userService  service.IUserService
+	batchMaxSize int
 }
 
 func NewUserController() *UserController {
+	// 从配置文件读取 batchMaxSize
+	batchMaxSize := g.Cfg().MustGet(gctx.New(), "server.batchMaxSize", 1000).Int()
+	if batchMaxSize <= 0 {
+		batchMaxSize = 1000 // 默认值
+	}
+
 	return &UserController{
-		userService: service.NewUserService(),
+		userService:  service.NewUserService(),
+		batchMaxSize: int(batchMaxSize),
 	}
 }
 
@@ -65,6 +76,13 @@ func (c *UserController) CreateUsers(r *ghttp.Request) {
 		return
 	}
 
+	// 校验批量大小
+	if len(users) > c.batchMaxSize {
+		writeError(r, gerror.NewCode(consts.BatchTooLarge,
+			fmt.Sprintf("batch size %d exceeds maximum limit %d", len(users), c.batchMaxSize)))
+		return
+	}
+
 	ctx := r.Context()
 	firstID, err := c.userService.CreateBatch(ctx, users)
 	if err != nil {
@@ -86,6 +104,19 @@ func (c *UserController) GetUsers(r *ghttp.Request) {
 	}
 	if err := r.Parse(&req); err != nil {
 		writeError(r, gerror.NewCode(consts.InvalidParams, "invalid request body"))
+		return
+	}
+
+	// 校验批量大小
+	totalQuerySize := len(req.IDs) + len(req.Emails)
+	if totalQuerySize == 0 {
+		writeError(r, gerror.NewCode(consts.InvalidParams, "either 'ids' or 'emails' must be provided"))
+		return
+	}
+
+	if totalQuerySize > c.batchMaxSize {
+		writeError(r, gerror.NewCode(consts.BatchTooLarge,
+			fmt.Sprintf("total query size %d exceeds maximum limit %d", totalQuerySize, c.batchMaxSize)))
 		return
 	}
 
@@ -129,6 +160,13 @@ func (c *UserController) UpdateUsers(r *ghttp.Request) {
 		return
 	}
 
+	// 校验批量大小
+	if len(users) > c.batchMaxSize {
+		writeError(r, gerror.NewCode(consts.BatchTooLarge,
+			fmt.Sprintf("batch size %d exceeds maximum limit %d", len(users), c.batchMaxSize)))
+		return
+	}
+
 	ctx := r.Context()
 	if err := c.userService.UpdateBatch(ctx, users); err != nil {
 		writeError(r, gerror.NewCode(consts.InternalError, err.Error()))
@@ -149,6 +187,13 @@ func (c *UserController) DeleteUsers(r *ghttp.Request) {
 	}
 	if len(req.IDs) == 0 {
 		writeError(r, gerror.NewCode(consts.InvalidParams, "missing 'ids' in request body"))
+		return
+	}
+
+	// 校验批量大小
+	if len(req.IDs) > c.batchMaxSize {
+		writeError(r, gerror.NewCode(consts.BatchTooLarge,
+			fmt.Sprintf("batch size %d exceeds maximum limit %d", len(req.IDs), c.batchMaxSize)))
 		return
 	}
 

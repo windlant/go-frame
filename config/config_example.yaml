@@ -1,5 +1,6 @@
 server:
   address: 8080
+  batchMaxSize: 1000
 
 logger:
   # path: "logs"          # 取消注释即可启用文件日志

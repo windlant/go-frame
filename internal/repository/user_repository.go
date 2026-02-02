@@ -106,15 +106,16 @@ func (r *UserRepository) GetAll(ctx context.Context) ([]*model.User, error) {
 	return users, err
 }
 
+// 保留单个查询接口
 func (r *UserRepository) GetByID(ctx context.Context, id int) (*model.User, error) {
 	redis := r.safeRedisClient()
 
-	// 1. 尝试从缓存获取
+	// 尝试从缓存获取
 	if user, ok := r.getUserFromCache(ctx, redis, id); ok {
 		return user, nil
 	}
 
-	// 2. 缓存未命中，查 DB
+	// 缓存未命中，查 DB
 	var user model.User
 	err := g.DB().Model("users").Where("id", id).Scan(&user)
 	if err != nil {
@@ -124,7 +125,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id int) (*model.User, erro
 		return nil, nil
 	}
 
-	// 3. 回填缓存
+	// 回填缓存
 	if redis != nil {
 		r.setUsersToCache(ctx, redis, []*model.User{&user})
 	}
